@@ -35,7 +35,30 @@ const queueDispatch = (action) => dispatchQueue.push(action);
  * Entity Slot Inheritance
  */
 
+const NOT_SET = {};
+
 const origGet = Immutable.Map.prototype.get;
+
+const entGet = function(k, notSetValue) {
+  // First lookup normally
+  let result = origGet.call(this, k, NOT_SET);
+  if (result !== NOT_SET) {
+    return result;
+  }
+
+  // Not found? Recurse in protos
+  const protoIds = origGet.call(this, 'protoIds');
+  if (protoIds) {
+    for (let i = 0; i < protoIds.size; ++i) {
+      result = entGet.call(origGet.call(this.__EM, protoIds.get(i)), k, NOT_SET);
+      if (result !== NOT_SET) {
+        return result;
+      }
+    }
+  }
+
+  return notSetValue;
+};
 
 const newGet = function(k, notSetValue) {
   // Saved before?
@@ -44,32 +67,11 @@ const newGet = function(k, notSetValue) {
     return wrapper;
   }
 
-  // Keep track of self
-  const em = this;
-
   // Create a wrapper that looks in protos
-  const e = origGet.call(em, k, notSetValue);
-  const protoIds = origGet.call(e, 'protoIds');
+  const e = origGet.call(this, k, notSetValue);
   wrapper = Object.create(e);
-  wrapper.get = function(k, notSetValue) {
-    // First lookup normally
-    let result = origGet.call(e, k);
-    if (result) {
-      return result;
-    }
-
-    // Not found? Recurse in protos
-    if (protoIds) {
-      for (let i = 0; i < protoIds.size; ++i) {
-        result = newGet.call(em, protoIds.get(i)).get(k);
-        if (result) {
-          return result;
-        }
-      }
-    }
-
-    return notSetValue;
-  };
+  wrapper.__EM = this;
+  wrapper.get = entGet;
 
   // Save for later
   if (!this.__WRAPPERS) {
@@ -147,11 +149,12 @@ entityReducers.Rectangle.DRAW = (state, action, r) => {
 entityReducers.Rectangle.TICK = (state, action, r) => {
   const y = state.getIn(['entities', action.id, 'y']);
   const vy = state.getIn(['entities', action.id, 'vy'], 0);
+  const ay = state.getIn(['entities', action.id, 'ay'], 300);
 
   return r.mergeDeep({
     entities: {
       [action.id]: {
-        vy: y + vy * action.dt > Styles.screenH ? -vy : vy + 300 * action.dt,
+        vy: y + vy * action.dt > Styles.screenH ? -vy : vy + ay * action.dt,
         y: Math.min(Styles.screenH, y + vy * action.dt),
       },
     },
