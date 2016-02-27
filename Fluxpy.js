@@ -1,507 +1,234 @@
 'use strict';
 
-import React, {
+const React = require('react-native');
+const {
   Image,
   StyleSheet,
   Text,
   View,
-} from 'react-native';
+} = React;
 
-import { connect } from 'react-redux/native';
-import Immutable from 'seamless-immutable';
-import WithCustomFont from '@exponent/with-custom-font';
+const { connect } = require('react-redux/native');
+const Immutable = require('immutable');
+const WithCustomFont = require('@exponent/with-custom-font');
+const uuid = require('uuid-js');
 
-import Media from './Media';
-import Styles from './Styles';
-
-import REPL from './REPL';
+const Media = require('./Media').default;
+const REPL = require('./REPL').default;
+const Styles = require('./Styles').default;
 
 REPL.registerEval('Fluxpy', (c) => eval(c));
 
+const I = Immutable.fromJS;
+
 
 /*
- * Return a reducer that runs the reducer `reductions[action]`, defaulting to
- * `reductions.DEFAULT` if not found.
- */
-const defaultReducer = (reductions) => (state, action, ...rest) =>
-  (reductions[action.type] || reductions.DEFAULT)(state, action, ...rest);
-
-
-/**
- * Bird
- *
- * Bird's (x, y) is position of its center
+ * Dispatch Queue
  */
 
-const BIRD_FREQ = 1.2;
-const BIRD_AMP = 140;
+const dispatchQueue = [];
 
-let GHOST = false;
+const queueDispatch = (action) => dispatchQueue.push(action);
 
-const birdReduce = defaultReducer({
-  START() {
-    return Immutable({
-      time: 0,
-      alive: true,
-      x: Styles.screenW - 280,
-      y: Styles.screenH / 2,
-      w: 41, h: 29,
-      vx: 110, vy: 0,
-      ay: 700, ax: 9,
-    });
-  },
 
-  TICK({ splash, bird, pipes: { pipes } }, { dt }, dispatch) {
-    let die = false;
-    if (bird.alive) {
-      if (bird.y < 0 || bird.y + bird.h > Styles.screenH) {
-        die = true;
-      }
-      if (!GHOST && pipes.some(({ x, y, w, bottom }) => (
-        x + w > bird.x - bird.w / 2 &&
-        x < bird.x + bird.w / 2 &&
-        (bottom ?
-         bird.y + bird.h / 2 > y :
-         bird.y - bird.h / 2 < y)
-      ))) {
-        die = true;
-      }
-    } else {
-      if (bird.y > Styles.screenH + 400) {
-        dispatch({ type: 'START' });
-      }
-    }
+/*
+ * Entity Slot Inheritance
+ */
 
-    let vy = bird.vy;
-    if (GHOST || splash) {
-      vy = BIRD_AMP * Math.sin(BIRD_FREQ * Math.PI * bird.time);
-    } else if (die) {
-      vy = -150;
-    } else {
-      vy += bird.ay * dt;
-    }
+const origGet = Immutable.Map.prototype.get;
 
-    return bird.merge({
-      time: bird.time + dt,
-      alive: bird.alive && !die,
-      y: bird.y + bird.vy * dt,
-      x: bird.alive ? bird.x : bird.x - 0.5 * bird.vx * dt,
-      vx: splash ? bird.vx : Math.max(0, bird.vx + bird.ax * dt),
-      vy,
-      ax: (die ?
-           Math.min(-bird.vx / 2, -0.25 * bird.vx * bird.vx / (bird.x - bird.w)) :
-           bird.ax),
-      ay: die ? 700 : bird.ay,
-    });
-  },
-
-  TOUCH({ bird }, { pressed }) {
-    return bird.merge({
-      ay: bird.alive && pressed ? -1600 : 700,
-    });
-  },
-
-  DEFAULT({ bird }) {
-    return bird;
-  },
-});
-
-const Bird = connect(
-  ({ bird }) => bird
-)(
-  ({ x, y, w, h, vx, vy }) => {
-    const rot = Math.max(-25, Math.min(vy / (vy > 0 ? 9 : 6), 50));
-    return (
-      <Image
-        key="bird-image"
-        style={{ position: 'absolute',
-                 transform: [{ rotate: rot + 'deg' }],
-                 left: x - w / 2, top: y - h / 2,
-                 width: w, height: h,
-                 backgroundColor: 'transparent' }}
-        source={{ uri: Media['floaty.png'] }}
-      />
-    );
+const newGet = function(k, notSetValue) {
+  // Saved before?
+  let wrapper = this.__WRAPPERS && this.__WRAPPERS[k];
+  if (wrapper) {
+    return wrapper;
   }
-);
 
+  // Keep track of self
+  const em = this;
 
-/**
- * Pipes
- *
- * A pipe's (x, y) is where the left corner of its 'surface' is (bottom edge for
- * top-pipe, top edge for bottom-pipe)
- */
+  // Create a wrapper that looks in protos
+  const e = origGet.call(em, k, notSetValue);
+  const protoIds = origGet.call(e, 'protoIds');
+  wrapper = Object.create(e);
+  wrapper.get = function(k, notSetValue) {
+    // First lookup normally
+    let result = origGet.call(e, k);
+    if (result) {
+      return result;
+    }
 
-const defaultPipe = {
-  x: Styles.screenW + 2, y: -2,
-  w: 58, h: 800,
-  bottom: false,
+    // Not found? Recurse in protos
+    if (protoIds) {
+      for (let i = 0; i < protoIds.size; ++i) {
+        result = newGet.call(em, protoIds.get(i)).get(k);
+        if (result) {
+          return result;
+        }
+      }
+    }
+
+    return notSetValue;
+  };
+
+  // Save for later
+  if (!this.__WRAPPERS) {
+    this.__WRAPPERS = {};
+  }
+  this.__WRAPPERS[k] = wrapper;
+  return wrapper;
 };
 
-const pipeImgs = [
-  'pillar-1.png',
-  'pillar-2.png',
-];
 
-const pickPipeImg = () =>
-  pipeImgs[Math.floor(pipeImgs.length * Math.random())];
+/*
+ * Entity Reduction
+ */
 
-const pipesReduce = defaultReducer({
-  START() {
-    return Immutable({
-      cursor: 100,
-      cursorDir: Math.random() < 0.5,
-      cursorFlipTime: Math.random(),
-      distance: 120,
-      pipes: [],
-    });
-  },
+const entityReducers = {};
 
-  TICK({ splash, bird, pipes }, { dt }, dispatch) {
-    if (splash) {
-      return pipes;
+// Make a new reducer with some initial reductions for actions, runs DEFAULT if
+// the incoming action doesn't match a reduction, or returns the state unchanged
+// if no DEFAULT
+const defaultReducer = (reductions = {}) => ({
+  ...reductions,
+
+  reduce(state, action, r, ...rest) {
+    const f = this[action.type] || this.DEFAULT;
+    if (f) {
+      return f(state, action, r, ...rest);
     }
-
-    if (pipes.distance < 0) {
-      dispatch({ type: 'ADD_PIPES' });
-    }
-
-    let cursorV = Math.random() * (pipes.cursorDir ? 1 : -1) * 220;
-    let cursorDir;
-    if (pipes.cursor < 40) {
-      cursorDir = true;
-    } else if (pipes.cursor > Styles.screenH - 340) {
-      cursorDir = false;
-    } else {
-      cursorDir = (pipes.cursorFlipTime < 0 ?
-                   !pipes.cursorDir :
-                   pipes.cursorDir);
-    }
-
-    return pipes.merge({
-      cursor: (pipes.cursor + cursorV * dt),
-      cursorFlipTime: (pipes.cursorFlipTime < 0 ?
-                       2.2 * Math.random() :
-                       pipes.cursorFlipTime - dt),
-      cursorDir,
-
-      distance: (pipes.distance < 0 ?
-                 240 * Math.random() + 70 :
-                 pipes.distance - bird.vx * dt),
-      pipes: pipes.pipes.map((pipe) => pipe.merge({
-        x: pipe.x - bird.vx * dt,
-      })).filter((pipe) => pipe.x + pipe.w > 0),
-    });
-  },
-
-  ADD_PIPES({ pipes }) {
-    const gap = 200 + 100 * Math.random();
-    const top = pipes.cursor + 100 * Math.random();
-    return pipes.merge({
-      pipes: pipes.pipes.concat([
-        { ...defaultPipe, y: top, bottom: false, img: pickPipeImg() },
-        { ...defaultPipe, y: top + gap, bottom: true, img: pickPipeImg() },
-      ]),
-    });
-  },
-
-  DEFAULT({ pipes }) {
-    return pipes;
+    return r;
   },
 });
 
-// Ensure a constant-ish number of components by rendering extra
-// off-screen pipes
-let maxNumPipes = pipeImgs.reduce((o, img) => ({ ...o, [img]: 10 }), {});
-const Pipes = connect(
-  ({ pipes: { cursor, pipes } }) => Immutable({ cursor, pipes })
-)(
-  ({ cursor, pipes }) => {
-    const pipesByImg = {};
-    pipeImgs.forEach((img) => pipesByImg[img] = []);
-    pipes.forEach((pipe) => pipesByImg[pipe.img].push(pipe));
-    pipeImgs.forEach((img) => {
-      const extraPipe = { ...defaultPipe, img };
-      maxNumPipes[img] = Math.max(maxNumPipes[img], pipesByImg[img].length);
-      while (pipesByImg[img].length < maxNumPipes[img]) {
-        pipesByImg[img].push(extraPipe);
-      }
-    });
-    const elems = [];
-    pipeImgs.forEach((img) => {
-      pipesByImg[img].forEach(({ x, y, w, h, bottom, img }, i) => {
-        elems.push(
-          <Image
-            key={`pipe-image-${img}-${i}`}
-            style={{ position: 'absolute',
-                     left: x, top: bottom ? y : y - h,
-                     width: 800, height: 800,
-                     backgroundColor: 'transparent' }}
-            source={{ uri: Media[img] }}
-          />
-        );
-      });
-    });
-    return (
-      <View
-        key="pipes-container"
-        style={Styles.container}>
-        {elems}
-      </View>
-    );
-  }
-);
+// Accumulate across entities
+const entityReduce = (state, action, r, ...rest) => {
+  const entities = state.get('entities');
+  entities.get = newGet;
+
+  // Accumulate across given id, ids, or all
+  const ids = (action.id && [action.id]) || action.ids || entities.keySeq();
+  return ids.reduce((r, id) => (
+    // Accumulate across entity's reducers
+    (entities.getIn([id, 'reducers']) || []).reduce((r, reducer) => (
+      entityReducers[reducer].reduce(state, { ...action, id }, r, ...rest)
+    ), r)
+  ), r);
+};
 
 
-/**
- * Score
+/*
+ * Rectangle
  */
 
-const scoreReduce = defaultReducer({
-  START() {
-    return 0;
-  },
+entityReducers.Rectangle = defaultReducer();
 
-  TICK({ splash, score }, { dt }) {
-    return splash ? score : score + dt;
-  },
+entityReducers.Rectangle.DRAW = (state, action, r) => {
+  const entities = state.get('entities');
+  const x = entities.getIn([action.id, 'x']);
+  const y = entities.getIn([action.id, 'y']);
+  const w = entities.getIn([action.id, 'w']);
+  const h = entities.getIn([action.id, 'h']);
+  const color = entities.getIn([action.id, 'color']);
 
-  DEFAULT({ score }) {
-    return score;
-  },
-});
+  r.push(
+    <View
+      key={action.id}
+      style={{ position: 'absolute',
+               left: x - w / 2, top: y - h / 2,
+               width: w, height: h,
+               borderRadius: 15,
+               backgroundColor: color }}
+    />
+  );
+  return r;
+};
 
-const WithScoreFont = WithCustomFont.createCustomFontComponent({
-  uri: 'https://dl.dropboxusercontent.com/u/535792/exponent/floaty-font.ttf',
-});
+entityReducers.Rectangle.TICK = (state, action, r) => {
+  const y = state.getIn(['entities', action.id, 'y']);
+  const vy = state.getIn(['entities', action.id, 'vy'], 0);
 
-const Score = connect(
-  ({ splash, score }) => Immutable({ splash, score: Math.floor(score) })
-)(
-  ({ splash, score }) => {
-    if (splash) {
-      return <View>{null}</View>;
-    }
-
-    return (
-      <WithScoreFont>
-        <View style={styles.scoreContainer}>
-          <Text
-            key="score-text"
-            style={styles.score}>
-            {score}
-          </Text>
-        </View>
-      </WithScoreFont>
-    );
-  }
-);
-
-
-/**
- * Clouds
- */
-
-const cloudImgs = [
-  'cloud-1.png',
-  'cloud-2.png',
-  'cloud-3.png',
-  'cloud-4.png',
-];
-
-const CLOUD_WIDTH = 283;
-const CLOUD_HEIGHT = 142;
-
-const cloudReduce = defaultReducer({
-  START() {
-    return Immutable({
-      clouds: cloudImgs.map((img) => ({
-        x: Styles.screenW * 3 * Math.random(),
-        y: Styles.screenH * Math.random() - CLOUD_HEIGHT / 2,
-        vxFactor: 0.1 + 0.2 * Math.random(),
-        img,
-      })),
-    });
-  },
-
-  TICK({ bird, clouds }, { dt }, dispatch) {
-    return clouds.merge({
-      clouds: clouds.clouds.map((cloud) => {
-        if (cloud.x + CLOUD_WIDTH > 0) {
-          return cloud.merge({
-            x: cloud.x - cloud.vxFactor * (bird.vx + 65) * dt,
-          });
-        }
-        return cloud.merge({
-          x: Styles.screenW * (1 + Math.random()),
-          y: Styles.screenH * Math.random() - CLOUD_HEIGHT / 2,
-          vxFactor: 0.2 + 0.2 * Math.random(),
-        });
-      }),
-    });
-  },
-
-  DEFAULT({ clouds }) {
-    return clouds;
-  },
-});
-
-const Clouds = connect(
-  ({ clouds: { clouds }}) => Immutable({ clouds })
-)(
-  ({ clouds }) => {
-    return (
-      <View
-        key="clouds-container"
-        style={Styles.container}>
-        {
-          clouds.asMutable().map(({ x, y, img }) => (
-            <Image
-              key={`cloud-image-${img}`}
-              style={{ position: 'absolute',
-                       left: x, top: y,
-                       width: CLOUD_WIDTH, height: CLOUD_HEIGHT,
-                       backgroundColor: 'transparent' }}
-              source={{ uri: Media[img] }}
-            />
-          ))
-        }
-      </View>
-    );
-  }
-);
-
-
-/**
- * Splash
- */
-
-const Splash = connect(
-  ({ splash }) => Immutable({ splash })
-)(
-  ({ splash }) => {
-    if (!splash) {
-      return <View key="splash-empty">{null}</View>;
-    }
-
-    const w = 398, h = 202;
-    return (
-      <Image
-        key="splash-image"
-        style={{ position: 'absolute',
-                 left: (Styles.screenW - w) / 2, top: 100,
-                 width: w, height: h,
-                 backgroundColor: 'transparent' }}
-        source={{ uri: Media['splash.png'] }}
-      />
-    );
-  }
-);
-
-
-/**
- * Rewind
- */
-
-const Rewind = connect(
-  ({ reverse }) => Immutable({ reverse })
-)(
-  ({ reverse }) => {
-    if (!reverse) {
-      return <View key="rewind-empty">{null}</View>;
-    }
-
-    const w = 36, h = 36;
-    return (
-      <Image
-        key="rewind-image"
-        style={{ position: 'absolute',
-                 left: (Styles.screenW - 30 - w), top: 42,
-                 width: w, height: h,
-                 backgroundColor: '#f00' }}
-        source={{ uri: Media['rewind.png'] }}
-      />
-    );
-  }
-);
-
-
-/**
- * Fluxpy
- */
-
-const sceneReduce = (state = Immutable({}), action, dispatch) => {
-  let newState = state.merge({ parent: state });
-
-  switch (action.type) {
-    case 'START':
-      // No parent when re-starting
-      newState = Immutable({
-        splash: true,
-      });
-      break;
-
-    case 'TICK':
-      // If in reverse mode, abort and return the parent (also in reverse mode)
-      if (state.reverse) {
-        if (!state.parent) {
-          return state;
-        }
-        return state.parent.merge({ reverse: true });
-      }
-      break;
-
-    case 'TOUCH':
-      newState = newState.merge({
-        splash: state.splash && !action.pressed,
-        reverse: action.pressed && !state.bird.alive,
-      });
-      break;
-  }
-
-  return newState.merge({
-    bird: birdReduce(state, action, dispatch),
-    pipes: pipesReduce(state, action, dispatch),
-    score: scoreReduce(state, action, dispatch),
-    clouds: cloudReduce(state, action, dispatch),
+  return r.mergeDeep({
+    entities: {
+      [action.id]: {
+        vy: y + vy * action.dt > Styles.screenH ? -vy : vy + 300 * action.dt,
+        y: Math.min(Styles.screenH, y + vy * action.dt),
+      },
+    },
   });
 };
 
-const Scene = () => (
-  <View
-    key="scene-container"
-    style={[Styles.container, { backgroundColor: '#f5fcff' }]}>
-    <Clouds />
-    <Pipes />
-    <Bird />
-    <Score />
-    <Rewind />
-    <Splash />
-  </View>
-);
 
+/*
+ * Scene
+ */
 
-const styles = StyleSheet.create({
-  scoreContainer: {
-    position: 'absolute',
-    top: 42,
-    left: 30,
-    paddingRight: 2,
-    paddingLeft: 5,
-    paddingTop: 2,
-    backgroundColor: '#363029',
-  },
-  score: {
-    color: '#fcfaf8',
-    fontSize: 33,
-    fontFamily: '04b_19',
-    backgroundColor: 'transparent',
-    margin: -1,
+const startState = I({
+  entities: {
+    'proto': {
+      w: 50, h: 50,
+      color: '#f00',
+    },
+
+    'test1': {
+      reducers: ['Rectangle'],
+      protoIds: ['proto'],
+      x: 200, y: 400,
+    },
+
+    'test2': {
+      reducers: ['Rectangle'],
+      protoIds: ['proto'],
+      x: 150, y: 340,
+    },
   },
 });
 
+const eventReduce = (state = startState, action, ...rest) => {
+  // Start
+  if (action.type === 'START') {
+    return startState;
+  }
+
+  // Accumulate new state with mutations for performance
+  return state.withMutations((r) => {
+    // Direct state updates
+    if (action.type === 'SET_IN') {
+      return r.setIn(action.path, action.value);
+    }
+    if (action.type === 'UPDATE_IN') {
+      return r.updateIn(action.path, action.update);
+    }
+    if (action.type === 'MERGE') {
+      return r.mergeDeep(action.data);
+    }
+
+    // Tick a clock so we always keep drawing
+    if (action.type === 'TICK') {
+      r = r.update('time', (t) => t + action.dt);
+    }
+
+    return entityReduce(state, action, r, ...rest);
+  });
+};
+
+const Scene = connect(
+  (state) => ({ state })
+)(
+  ({ state }) => (
+    <View
+      key="scene-container"
+      style={[Styles.container, { backgroundColor: '#f5fcff' }]}>
+      {entityReduce(state, { type: 'DRAW' }, [])}
+    </View>
+  )
+);
+
+
+const styles = StyleSheet.create({});
+
 export {
-  sceneReduce,
+  dispatchQueue,
+  eventReduce,
   Scene,
 };

@@ -1,23 +1,24 @@
 {
-  "name": "fluxpybird",
+  "name": "protux",
   "version": "0.0.0",
-  "description": "Hello Exponent!",
+  "description": "Prototype inheritance, Redux. Let's go!",
   "main": "main.js",
   "author": null,
   "exp": {
-    "name": "Floaty Plane",
+    "name": "Protux",
     "iconUrl": "https://s3-us-west-2.amazonaws.com/examples-exp/floaty_icon.png",
     "orientation": "portrait",
     "abiVersion": "5.0.0"
   },
   "dependencies": {
     "@exponent/with-custom-font": "^1.0.0",
+    "immutable": "^3.7.6",
     "react": "^0.14.7",
     "react-native": "exponentjs/react-native#2016-02-09",
     "react-redux": "^3.1.0",
     "redux": "^3.0.4",
-    "seamless-immutable": "^4.0.2",
-    "socket.io-client": "^1.3.7"
+    "socket.io-client": "^1.3.7",
+    "uuid-js": "^0.7.5"
   },
   "devDependencies": {
     "babel-eslint": "^4.1.6",

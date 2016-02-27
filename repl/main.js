@@ -81,6 +81,8 @@ var rl = readline.createInterface({
   output: process.stdout,
 });
 
+var multi = null;
+
 rl.on('line', function(line) {
   if (line.startsWith(':context ')) {
     context = line.split(' ')[1];
@@ -89,11 +91,25 @@ rl.on('line', function(line) {
     return;
   }
 
+  if (line.startsWith(':multi')) {
+    multi = '';
+    return;
+  }
+  if (multi !== null) {
+    if (line.startsWith(':end')) {
+      line = multi;
+      multi = null;
+    } else {
+      multi += '\n' + line;
+      return;
+    }
+  }
+
   io.emit('evalIn', { contextName: context, code: transform(line) });
 });
 
 
-fs.watchFile('scratch.js', function(curr) {
+fs.watchFile(process.env.HOME + '/.scratch.js', function(curr) {
   console.log(':run scratch.js');
   fs.readFile('scratch.js', function(err, data) {
     if (err) {

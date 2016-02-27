@@ -18,7 +18,7 @@ REPL.registerEval('main', (c) => eval(c));
 
 
 // Import from a different module for a different game!
-import { sceneReduce, Scene } from './Fluxpy';
+import { dispatchQueue, eventReduce, Scene } from './Fluxpy';
 
 
 /**
@@ -123,10 +123,6 @@ const Game = () => (
  * Initializes a Redux store and provides it to Game.
  */
 
-const dispatchQueue = [];
-
-const queueDispatch = (action) => dispatchQueue.push(action);
-
 const mainReduce = (state, action) => {
   if (action.type === 'TICK') {
     REPL.flushEvalInQueue();
@@ -136,7 +132,7 @@ const mainReduce = (state, action) => {
   dispatchQueue.length = 0;
   const dispatch = (action) => actions.push(action);
   while (actions.length > 0) {
-    state = sceneReduce(state, actions.shift(), dispatch);
+    state = eventReduce(state, actions.shift(), dispatch);
   }
   return state;
 };
