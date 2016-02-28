@@ -1,24 +1,21 @@
 'use strict';
 
-var fs = require('fs');
+const http = require('http').createServer();
 
-var http = require('http').createServer();
-var io = require('socket.io')(http);
-var babel = require('babel-core');
-var readline = require('readline');
-
-
-function pretty(msg) {
-  if (typeof msg === 'string') {
-    return msg;
-  } else {
-    return JSON.stringify(msg, null, 2);
-  }
-}
+const io = require('socket.io')(http);
+const babel = require('babel-core');
+const readline = require('readline');
 
 
-io.on('connection', function(socket) {
-  socket.on('evalResult', function(msg) {
+let context = 'main';
+
+
+const pretty = (msg) =>
+  typeof msg === 'string' ? msg : JSON.stringify(msg, null, 2);
+
+
+io.on('connection', (socket) => {
+  socket.on('evalResult', (msg) => {
     if (msg.result) {
       console.log('= ' + pretty(msg.result));
     }
@@ -27,63 +24,39 @@ io.on('connection', function(socket) {
     }
     rl.prompt();
   });
-  socket.on('log', function(msg) {
+
+  socket.on('log', (msg) => {
     console.log('~ ' + pretty(msg));
     rl.prompt();
   });
+
   rl.prompt();
 });
 
-http.listen(5000, function() {
-  console.log('listening on *:5000');
-});
+http.listen(5000, () => console.log('listening on *:5000'));
 
 
-var context = 'main';
-
-function transform(code) {
-  var filename = context + '.js';
-  var transformed = babel.transform(code, {
+const transform = (code) => {
+  const filename = context + '.js';
+  return babel.transform(code, {
     retainLines: true,
     compact: true,
     comments: false,
     filename,
-    /* whitelist: [
-       // Keep in sync with packager/react-packager/.babelrc
-       'es6.arrowFunctions',
-       'es6.blockScoping',
-       'es6.classes',
-       'es6.constants',
-       'es6.destructuring',
-       'es6.parameters',
-       'es6.properties.computed',
-       'es6.properties.shorthand',
-       'es6.spread',
-       'es6.templateLiterals',
-       'es7.asyncFunctions',
-       'es7.trailingFunctionCommas',
-       'es7.objectRestSpread',
-       'flow',
-       'react',
-       'react.displayName',
-       'regenerator',
-       ], */
-    plugins: [],
     sourceFileName: filename,
     sourceMaps: false,
-  });
-  return transformed.code;
-}
+  }).code;
+};
 
 
-var rl = readline.createInterface({
+let multi = null;
+
+const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
 });
 
-var multi = null;
-
-rl.on('line', function(line) {
+rl.on('line', (line) => {
   if (line.startsWith(':context ')) {
     context = line.split(' ')[1];
     console.log('context is now \'' + context + '\'');
@@ -109,12 +82,3 @@ rl.on('line', function(line) {
 });
 
 
-fs.watchFile(process.env.HOME + '/.scratch.js', function(curr) {
-  console.log(':run scratch.js');
-  fs.readFile('scratch.js', function(err, data) {
-    if (err) {
-      throw err;
-    }
-    io.emit('evalIn', { contextName: context, code: transform(data) });
-  });
-});
