@@ -1,4 +1,9 @@
 'use strict';
+'use extensible';
+
+// For destructuring Immutable.js
+import patch from 'extensible-polyfill';
+patch('immutable');
 
 const React = require('react-native');
 const {
@@ -120,14 +125,9 @@ const entityReduce = (state, action, r, ...rest) => {
 
 entityReducers.Rectangle = defaultReducer();
 
-entityReducers.Rectangle.DRAW = (state, action, r) => {
-  const entities = state.get('entities');
-  const x = entities.getIn([action.id, 'x']);
-  const y = entities.getIn([action.id, 'y']);
-  const w = entities.getIn([action.id, 'w']);
-  const h = entities.getIn([action.id, 'h']);
-  const color = entities.getIn([action.id, 'color']);
-
+entityReducers.Rectangle.DRAW = ({
+  entities: { [action.id]: { x, y, w, h, color } },
+}, action, r) => {
   r.push(
     <View
       key={action.id}
@@ -141,20 +141,18 @@ entityReducers.Rectangle.DRAW = (state, action, r) => {
   return r;
 };
 
-entityReducers.Rectangle.TICK = (state, action, r) => {
-  const y = state.getIn(['entities', action.id, 'y']);
-  const vy = state.getIn(['entities', action.id, 'vy'], 0);
-  const ay = state.getIn(['entities', action.id, 'ay'], 300);
-
-  return r.mergeDeep({
+entityReducers.Rectangle.TICK = ({
+  entities: { [action.id]: { y, vy = 0, ay = 300 } },
+}, action, r) => (
+  r.mergeDeep({
     entities: {
       [action.id]: {
         vy: y + vy * action.dt > Styles.screenH ? -vy : vy + ay * action.dt,
         y: Math.min(Styles.screenH, y + vy * action.dt),
       },
     },
-  });
-};
+  })
+);
 
 
 /*
