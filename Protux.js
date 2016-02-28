@@ -2,18 +2,13 @@
 
 const React = require('react-native');
 const {
-  Image,
-  StyleSheet,
-  Text,
   View,
 } = React;
 
 const { connect } = require('react-redux/native');
 const Immutable = require('immutable');
-const WithCustomFont = require('@exponent/with-custom-font');
 const uuid = require('uuid-js');
 
-const Media = require('./Media').default;
 const REPL = require('./REPL').default;
 const Styles = require('./Styles').default;
 
@@ -227,8 +222,6 @@ const Scene = connect(
   )
 );
 
-
-const styles = StyleSheet.create({});
 
 export {
   dispatchQueue,
