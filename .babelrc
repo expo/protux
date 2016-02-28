@@ -2,6 +2,6 @@
   "presets": ["react-native"],
   "plugins": [
     "transform-decorators-legacy",
-    "extensible-destructuring",
+    ["extensible-destructuring", {"mode": "optout"}],
   ],
 }

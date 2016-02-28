@@ -1,5 +1,4 @@
 'use strict';
-'use extensible';
 
 // For destructuring Immutable.js
 import patch from 'extensible-polyfill';
