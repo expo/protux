@@ -17,8 +17,7 @@ import REPL from './REPL';
 REPL.registerEval('main', (c) => eval(c));
 
 
-// Import from a different module for a different game!
-import { dispatchQueue, eventReduce, Scene } from './Fluxpy';
+import { dispatchQueue, eventReduce, Scene } from './Protux';
 
 
 /**

@@ -17,7 +17,7 @@ const Media = require('./Media').default;
 const REPL = require('./REPL').default;
 const Styles = require('./Styles').default;
 
-REPL.registerEval('Fluxpy', (c) => eval(c));
+REPL.registerEval('Protux', (c) => eval(c));
 
 const I = Immutable.fromJS;
 
