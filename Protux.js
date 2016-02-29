@@ -183,9 +183,9 @@ const eventReduce = (state, action, dispatch) => {
 /*
  * Top-level
  *
- * Top-level redux start state, redux reducer and react-native component for
- * Protux. This the only part that binds Protux to redux and react-native, the
- * code above is library-agnostic.
+ * Top-level start state, reducer and react-native component for Protux. This
+ * the only part that binds Protux to react-native, the code above is
+ * library-agnostic.
  */
 
 const start = (state) =>
