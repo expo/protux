@@ -20,7 +20,7 @@ import Protux from 'Protux';
 
 
 // import { startState } from './examples/Simple';
-import { startState } from './examples/floaty/Floaty';
+import './examples/floaty/Floaty';
 
 
 /**
@@ -128,7 +128,7 @@ const Game = () => (
 const Main = () => {
   REPL.connect();
 
-  const store = createStore(Protux.reduce, Protux.start(startState));
+  const store = createStore(Protux.reduce);
   return (
     <Provider store={store}>
       {() => <Game />}
