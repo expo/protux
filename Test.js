@@ -24,12 +24,20 @@ const Protux = require('./Protux').default;
 Protux.reducers.Rectangle = Protux.defaultReducer();
 
 Protux.reducers.Rectangle.DRAW = ({
-  entities: { [action.id]: { x, y, w = 50, h = 50, color = '#f00' } },
+  entities: {
+    [action.id]: {
+      x, y,
+      rot = 0,
+      w = 50, h = 50,
+      color = 'red',
+    },
+  },
 }, action, r) => {
   r.push(
     <View
       key={action.id}
       style={{ position: 'absolute',
+               transform: [{ rotate: rot + 'deg' }],
                left: x - w / 2, top: y - h / 2,
                width: w, height: h,
                borderRadius: 15,
@@ -54,12 +62,28 @@ Protux.reducers.Rectangle.TICK = ({
 
 
 /*
+ * Rotator
+ */
+
+Protux.reducers.Rotator = Protux.defaultReducer();
+
+Protux.reducers.Rotator.TICK = ({
+  entities: { [action.id]: { rot = 0, rotSpeed = 90 } },
+}, action, r) => (
+  r.mergeDeep({
+    entities: { [action.id]: { rot: rot + rotSpeed * action.dt }},
+  })
+);
+
+
+/*
  * start
  */
 
 const startState = Immutable.fromJS({
   entities: {
     'proto': {
+      color: '#0f0',
     },
 
     'test1': {
@@ -69,9 +93,10 @@ const startState = Immutable.fromJS({
     },
 
     'test2': {
-      reducers: ['Rectangle'],
+      reducers: ['Rectangle', 'Rotator'],
       protoIds: ['proto'],
       x: 150, y: 340,
+      rotSpeed: 210,
     },
   },
 });
