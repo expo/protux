@@ -168,7 +168,7 @@ const eventReduce = (state, action, dispatch) => {
 
     // Tick a clock so we always keep drawing
     if (action.type === 'TICK') {
-      r = r.update('time', (t) => t + action.dt);
+      r = r.update('time', (t) => (t || 0) + action.dt);
     }
 
     return entityReduce(state, action, r, dispatch);
