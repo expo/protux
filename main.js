@@ -19,7 +19,7 @@ import Styles from 'Styles';
 import Protux from 'Protux';
 
 
-// import { startState } from './examples/Simple';
+//import './examples/Simple';
 import './examples/floaty/Floaty';
 
 

@@ -50,7 +50,7 @@ Protux.reducers.Rectangle.DRAW = ({
 Protux.reducers.Rectangle.TICK = ({
   entities: { [action.id]: { y, vy = 0, ay = 300 } },
 }, action, r) => (
-  r.mergeDeep({
+  Protux.merge(r, {
     entities: {
       [action.id]: {
         vy: y + vy * action.dt > Styles.screenH ? -vy : vy + ay * action.dt,
@@ -70,7 +70,7 @@ Protux.reducers.Rotator = Protux.defaultReducer();
 Protux.reducers.Rotator.TICK = ({
   entities: { [action.id]: { rot = 0, rotSpeed = 90 } },
 }, action, r) => (
-  r.mergeDeep({
+  Protux.merge(r, {
     entities: { [action.id]: { rot: rot + rotSpeed * action.dt }},
   })
 );
@@ -80,7 +80,7 @@ Protux.reducers.Rotator.TICK = ({
  * start
  */
 
-const startState = Immutable.fromJS({
+Protux.states.start = Immutable.fromJS({
   entities: {
     'proto': {
       color: '#0f0',
@@ -102,6 +102,3 @@ const startState = Immutable.fromJS({
 });
 
 
-export {
-  startState,
-};
