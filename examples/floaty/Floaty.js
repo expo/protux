@@ -2,12 +2,11 @@
 
 
 const REPL = require('REPL').default;
-REPL.registerEval('Fluxpy', (c) => eval(c));
+REPL.registerEval('Floaty', (c) => eval(c));
 
 
 const React = require('react-native');
 const {
-  View,
   Image,
 } = React;
 
@@ -22,7 +21,7 @@ const Media = require('./Media').default;
 
 
 /*
- * BirdPhysics
+ * Bird
  */
 
 Protux.on('BirdPhysics', 'TICK', ({
@@ -47,10 +46,6 @@ Protux.on('BirdPhysics', 'TICK', ({
   });
 });
 
-
-/*
- * BirdSplashOscillation
- */
 
 const BIRD_FREQ = 1.2;
 const BIRD_AMP = 140;
@@ -84,10 +79,6 @@ Protux.on('BirdSplashOscillation', 'TOUCH', ({
 ));
 
 
-/*
- * BirdControls
- */
-
 Protux.on('BirdControls', 'TICK', ({
   entities: {
     [action.id]: {
@@ -111,7 +102,6 @@ Protux.on('BirdControls', 'TICK', ({
 });
 
 Protux.on('BirdControls', 'TOUCH', (_, action, next, dispatch) => (
-  // Apply acceleration on touch
   Protux.merge(next, {
     entities: {
       [action.id]: { ay: action.pressed ? -1600 : 700 },
@@ -119,10 +109,6 @@ Protux.on('BirdControls', 'TOUCH', (_, action, next, dispatch) => (
   })
 ));
 
-
-/*
- * BirdDraw
- */
 
 Protux.on('BirdDraw', 'DRAW', ({
   entities: {
@@ -145,13 +131,11 @@ Protux.on('BirdDraw', 'DRAW', ({
 });
 
 
-
 /*
  * start
  */
 
 Protux.states.start = Immutable.fromJS({
-  time: 0,
   entities: {
     bird: {
       reducers: ['BirdPhysics', 'BirdSplashOscillation', 'BirdDraw'],
