@@ -2,7 +2,7 @@
 
 
 const REPL = require('REPL').default;
-REPL.registerEval('Test', (c) => eval(c));
+REPL.registerEval('Simple', (c) => eval(c));
 
 
 const React = require('react-native');
@@ -21,9 +21,7 @@ const Protux = require('Protux').default;
  * Rectangle
  */
 
-Protux.reducers.Rectangle = Protux.defaultReducer();
-
-Protux.reducers.Rectangle.DRAW = ({
+Protux.on('Rectangle', 'DRAW', ({
   entities: {
     [action.id]: {
       x, y,
@@ -32,8 +30,8 @@ Protux.reducers.Rectangle.DRAW = ({
       color = 'red',
     },
   },
-}, action, r) => {
-  r.push(
+}, action, elements) => {
+  elements.push(
     <View
       key={action.id}
       style={{ position: 'absolute',
@@ -44,13 +42,13 @@ Protux.reducers.Rectangle.DRAW = ({
                backgroundColor: color }}
     />
   );
-  return r;
-};
+  return elements;
+});
 
-Protux.reducers.Rectangle.TICK = ({
+Protux.on('Rectangle', 'TICK', ({
   entities: { [action.id]: { y, vy = 0, ay = 300 } },
-}, action, r) => (
-  Protux.merge(r, {
+}, action, next) => (
+  Protux.merge(next, {
     entities: {
       [action.id]: {
         vy: y + vy * action.dt > Styles.screenH ? -vy : vy + ay * action.dt,
@@ -58,22 +56,20 @@ Protux.reducers.Rectangle.TICK = ({
       },
     },
   })
-);
+));
 
 
 /*
  * Rotator
  */
 
-Protux.reducers.Rotator = Protux.defaultReducer();
-
-Protux.reducers.Rotator.TICK = ({
+Protux.on('Rotator', 'TICK', ({
   entities: { [action.id]: { rot = 0, rotSpeed = 90 } },
-}, action, r) => (
-  Protux.merge(r, {
+}, action, next) => (
+  Protux.merge(next, {
     entities: { [action.id]: { rot: rot + rotSpeed * action.dt }},
   })
-);
+));
 
 
 /*
