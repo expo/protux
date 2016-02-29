@@ -163,7 +163,7 @@ const eventReduce = (state, action, dispatch) => {
       return r.updateIn(action.path, action.update);
     }
     if (action.type === 'MERGE') {
-      return r.mergeDeep(action.data);
+      return r.mergeDeep(action.state);
     }
 
     // Tick a clock so we always keep drawing
