@@ -1,5 +1,10 @@
 'use strict';
 
+
+import REPL from './REPL';
+REPL.registerEval('main', (c) => eval(c));
+
+
 import React, {
   AppRegistry,
   PanResponder,
@@ -9,15 +14,12 @@ import React, {
 import { connect, Provider } from 'react-redux/native';
 import { createStore } from 'redux';
 
+
 import Styles from './Styles';
+import Protux from './Protux';
 
 
-import REPL from './REPL';
-
-REPL.registerEval('main', (c) => eval(c));
-
-
-import { dispatchQueue, eventReduce, Scene } from './Protux';
+import Test from './Test';
 
 
 /**
@@ -110,7 +112,7 @@ class Clock extends React.Component {
 const Game = () => (
   <View style={Styles.container}>
     <Clock />
-    <Scene />
+    <Protux.Scene />
     <Touch style={Styles.container}/>
   </View>
 );
@@ -122,25 +124,10 @@ const Game = () => (
  * Initializes a Redux store and provides it to Game.
  */
 
-const mainReduce = (state, action) => {
-  if (action.type === 'TICK') {
-    REPL.flushEvalInQueue();
-  }
-
-  const actions = [action].concat(dispatchQueue);
-  dispatchQueue.length = 0;
-  const dispatch = (action) => actions.push(action);
-  while (actions.length > 0) {
-    state = eventReduce(state, actions.shift(), dispatch);
-  }
-  return state;
-};
-
 const Main = () => {
   REPL.connect();
 
-  const store = createStore(mainReduce,
-                            mainReduce(undefined, { type: 'START' }));
+  const store = createStore(Protux.reduce, Protux.start(Test.startState));
   return (
     <Provider store={store}>
       {() => <Game />}
