@@ -1,7 +1,7 @@
 'use strict';
 
 
-import REPL from './REPL';
+import REPL from 'REPL';
 REPL.registerEval('main', (c) => eval(c));
 
 
@@ -15,11 +15,11 @@ import { connect, Provider } from 'react-redux/native';
 import { createStore } from 'redux';
 
 
-import Styles from './Styles';
-import Protux from './Protux';
+import Styles from 'Styles';
+import Protux from 'Protux';
 
 
-import Test from './Test';
+import { startState } from './examples/Simple';
 
 
 /**
@@ -127,7 +127,7 @@ const Game = () => (
 const Main = () => {
   REPL.connect();
 
-  const store = createStore(Protux.reduce, Protux.start(Test.startState));
+  const store = createStore(Protux.reduce, Protux.start(startState));
   return (
     <Provider store={store}>
       {() => <Game />}

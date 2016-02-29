@@ -1,3 +1,6 @@
+/*
+ * @providesModule Styles
+ */
 'use strict';
 
 import Dimensions from 'Dimensions';

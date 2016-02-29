@@ -1,3 +1,6 @@
+/*
+ * @providesModule REPL
+ */
 'use strict';
 
 // Need this to make ''socket.io-client' work

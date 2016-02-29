@@ -1,7 +1,7 @@
 'use strict';
 
 
-const REPL = require('./REPL').default;
+const REPL = require('REPL').default;
 REPL.registerEval('Test', (c) => eval(c));
 
 
@@ -13,8 +13,8 @@ const {
 const Immutable = require('immutable');
 
 
-const Styles = require('./Styles').default;
-const Protux = require('./Protux').default;
+const Styles = require('Styles').default;
+const Protux = require('Protux').default;
 
 
 /*
@@ -102,6 +102,6 @@ const startState = Immutable.fromJS({
 });
 
 
-export default {
+export {
   startState,
 };

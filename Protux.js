@@ -1,10 +1,13 @@
+/*
+ * @providesModule Protux
+ */
 'use strict';
 
 
 import patch from 'extensible-polyfill';
 patch('immutable');
 
-const REPL = require('./REPL').default;
+const REPL = require('REPL').default;
 REPL.registerEval('Protux', (c) => eval(c));
 
 
@@ -18,7 +21,7 @@ const Immutable = require('immutable');
 const uuid = require('uuid-js');
 
 
-const Styles = require('./Styles').default;
+const Styles = require('Styles').default;
 
 
 /*
