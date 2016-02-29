@@ -36,9 +36,9 @@ import './examples/floaty/Floaty';
 const Touch = connect()(
   ({ dispatch, children, ...props }) => {
     const panGrant = (_, gestureState) =>
-      dispatch({ ...gestureState, type: 'TOUCH', pressed: true });
+      dispatch({ ...gestureState, type: 'TOUCH', id: 'all', pressed: true });
     const panRelease = (_, gestureState) =>
-      dispatch({ ...gestureState, type: 'TOUCH', pressed: false });
+      dispatch({ ...gestureState, type: 'TOUCH', id: 'all', pressed: false });
     const panResponder = PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onPanResponderGrant: panGrant,
@@ -95,7 +95,7 @@ class Clock extends React.Component {
   }
 
   tick(dt) {
-    this.props.dispatch({ type: 'TICK', dt });
+    this.props.dispatch({ type: 'TICK', id: 'all', dt });
   }
 
   render() {
