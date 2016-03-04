@@ -37,6 +37,7 @@ http.listen(5000, () => console.log('listening on *:5000'));
 
 
 const transform = (code) => {
+  code = "'use extensible';\n" + code;
   const filename = context + '.js';
   return babel.transform(code, {
     retainLines: true,

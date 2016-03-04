@@ -1,4 +1,5 @@
 'use strict';
+'use extensible';
 
 
 const REPL = require('REPL').default;
