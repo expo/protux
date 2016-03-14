@@ -22,7 +22,7 @@ const Protux = require('Protux').default;
  * Rectangle
  */
 
-Protux.on('Rectangle', 'DRAW', ({
+Protux.reducer('Rectangle', 'DRAW', ({
   entities: {
     [action.id]: {
       x, y,
@@ -46,7 +46,7 @@ Protux.on('Rectangle', 'DRAW', ({
   return elements;
 });
 
-Protux.on('Rectangle', 'TICK', ({
+Protux.reducer('Rectangle', 'TICK', ({
   entities: { [action.id]: { y, vy = 0, ay = 300 } },
 }, action, next) => (
   Protux.merge(next, {
@@ -64,7 +64,7 @@ Protux.on('Rectangle', 'TICK', ({
  * Rotator
  */
 
-Protux.on('Rotator', 'TICK', ({
+Protux.reducer('Rotator', 'TICK', ({
   entities: { [action.id]: { rot = 0, rotSpeed = 90 } },
 }, action, next) => (
   Protux.merge(next, {
