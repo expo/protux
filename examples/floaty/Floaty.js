@@ -31,9 +31,9 @@ Protux.on('BirdPhysics', 'TICK', ({
       x, y, vx, vy, ax, ay,
     },
   },
-}, action, next, dispatch) => {
+}, action, next, fire) => {
   if (y > Styles.screenH + 400) {
-    dispatch({ type: 'START' });
+    fire({ type: 'START' });
   }
 
   return Protux.merge(next, {
@@ -53,7 +53,7 @@ const BIRD_AMP = 140;
 
 Protux.on('BirdSplashOscillation', 'TICK', ({
   time,
-}, action, next, dispatch) => (
+}, action, next, fire) => (
   Protux.merge(next, {
     entities: {
       [action.id]: {
@@ -68,7 +68,7 @@ Protux.on('BirdSplashOscillation', 'TOUCH', ({
   entities: {
     [action.id]: { reducers },
   },
-}, action, next, dispatch) => (
+}, action, next, fire) => (
   Protux.merge(next, {
     entities: {
       [action.id]: {
@@ -87,7 +87,7 @@ Protux.on('BirdControls', 'TICK', ({
       y, vy, h,
     },
   },
-}, action, next, dispatch) => {
+}, action, next, fire) => {
   // Died? Bounce and remove control
   if (y < 0 || y + h > Styles.screenH) {
     return Protux.merge(next, {
@@ -102,7 +102,7 @@ Protux.on('BirdControls', 'TICK', ({
   return next;
 });
 
-Protux.on('BirdControls', 'TOUCH', (_, action, next, dispatch) => (
+Protux.on('BirdControls', 'TOUCH', (_, action, next, fire) => (
   Protux.merge(next, {
     entities: {
       [action.id]: { ay: action.pressed ? -1600 : 700 },

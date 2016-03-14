@@ -128,7 +128,7 @@ const Game = () => (
 const Main = () => {
   REPL.connect();
 
-  const store = createStore(Protux.reduce);
+  const store = createStore(Protux.flush);
   return (
     <Provider store={store}>
       {() => <Game />}
